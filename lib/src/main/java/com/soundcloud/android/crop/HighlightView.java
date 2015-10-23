@@ -49,8 +49,8 @@ class HighlightView {
     public static final int MOVE             = (1 << 5);
 
     private static final int DEFAULT_HIGHLIGHT_COLOR = 0xFF33B5E5;
-    private static final float HANDLE_RADIUS_DP = 12f;
-    private static final float OUTLINE_DP = 2f;
+    private static final float DEFAULT_HANDLE_RADIUS_DP = 12f;
+    private static final float DEFAULT_OUTLINE_DP = 2f;
 
     enum ModifyMode { None, Move, Grow }
     enum HandleMode { Changing, Always, Never }
@@ -68,13 +68,13 @@ class HighlightView {
     private boolean showThirds;
     private boolean showCircle;
     private int highlightColor;
+    private float handleRadius;
+    private float outlineWidth;
 
     private ModifyMode modifyMode = ModifyMode.None;
     private HandleMode handleMode = HandleMode.Changing;
     private boolean maintainAspectRatio;
     private float initialAspectRatio;
-    private float handleRadius;
-    private float outlineWidth;
     private boolean isFocused;
 
     public HighlightView(View context) {
@@ -92,6 +92,10 @@ class HighlightView {
             highlightColor = attributes.getColor(R.styleable.CropImageView_highlightColor,
                     DEFAULT_HIGHLIGHT_COLOR);
             handleMode = HandleMode.values()[attributes.getInt(R.styleable.CropImageView_showHandles, 0)];
+            handleRadius = attributes.getDimension(R.styleable.CropImageView_handleRadius,
+                    dpToPx(DEFAULT_HANDLE_RADIUS_DP));
+            outlineWidth = attributes.getDimension(R.styleable.CropImageView_outlineWidth,
+                    dpToPx(DEFAULT_OUTLINE_DP));
         } finally {
             attributes.recycle();
         }
@@ -110,12 +114,10 @@ class HighlightView {
         outsidePaint.setARGB(125, 50, 50, 50);
         outlinePaint.setStyle(Paint.Style.STROKE);
         outlinePaint.setAntiAlias(true);
-        outlineWidth = dpToPx(OUTLINE_DP);
 
         handlePaint.setColor(highlightColor);
         handlePaint.setStyle(Paint.Style.FILL);
         handlePaint.setAntiAlias(true);
-        handleRadius = dpToPx(HANDLE_RADIUS_DP);
 
         modifyMode = ModifyMode.None;
     }
@@ -125,20 +127,25 @@ class HighlightView {
     }
 
     protected void draw(Canvas canvas) {
-        canvas.save();
         Path path = new Path();
         outlinePaint.setStrokeWidth(outlineWidth);
         if (!hasFocus()) {
             outlinePaint.setColor(Color.BLACK);
             canvas.drawRect(drawRect, outlinePaint);
         } else {
+            canvas.save();
             Rect viewDrawingRect = new Rect();
             viewContext.getDrawingRect(viewDrawingRect);
 
-            path.addRect(new RectF(drawRect), Path.Direction.CW);
             outlinePaint.setColor(highlightColor);
 
             if (isClipPathSupported(canvas)) {
+                RectF nr = new RectF();
+                matrix.mapRect(nr, imageRect);
+                path.addRect(nr, Path.Direction.CW);
+                canvas.clipPath(path, Region.Op.INTERSECT);
+                path.rewind();
+                path.addRect(new RectF(drawRect), Path.Direction.CW);
                 canvas.clipPath(path, Region.Op.DIFFERENCE);
                 canvas.drawRect(viewDrawingRect, outsidePaint);
             } else {
@@ -201,7 +208,7 @@ class HighlightView {
     }
 
     private void drawThirds(Canvas canvas) {
-        outlinePaint.setStrokeWidth(1);
+        outlinePaint.setStrokeWidth(dpToPx(0.5F));
         float xThird = (drawRect.right - drawRect.left) / 3;
         float yThird = (drawRect.bottom - drawRect.top) / 3;
         
@@ -216,7 +223,7 @@ class HighlightView {
     }
 
     private void drawCircle(Canvas canvas) {
-        outlinePaint.setStrokeWidth(1);
+        outlinePaint.setStrokeWidth(dpToPx(0.5F));
         canvas.drawOval(new RectF(drawRect), outlinePaint);
     }
 
@@ -230,7 +237,7 @@ class HighlightView {
     // Determines which edges are hit by touching at (x, y)
     public int getHit(float x, float y) {
         Rect r = computeLayout();
-        final float hysteresis = 20F;
+        final float hysteresis = handleRadius * 2;//dpToPx(20F);
         int retval = GROW_NONE;
 
         // verticalCheck makes sure the position is between the top and

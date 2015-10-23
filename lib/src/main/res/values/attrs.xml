@@ -11,6 +11,8 @@
           <enum name="always" value="1" />
           <enum name="never" value="2" />
         </attr>
+        <attr name="handleRadius" format="dimension" />
+        <attr name="outlineWidth" format="dimension" />
     </declare-styleable>
 
 </resources>

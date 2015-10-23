@@ -317,6 +317,8 @@ public class CropImageActivity extends MonitoredActivity {
         }
     }
 
+    Rect lastRect;
+
     private Bitmap decodeRegionCrop(Rect rect, int outWidth, int outHeight) {
         // Release memory now
         clearImageView();
@@ -364,6 +366,7 @@ public class CropImageActivity extends MonitoredActivity {
         } finally {
             CropUtil.closeSilently(is);
         }
+        lastRect = rect;
         return croppedImage;
     }
 
@@ -427,7 +430,7 @@ public class CropImageActivity extends MonitoredActivity {
     }
 
     private void setResultUri(Uri uri) {
-        setResult(RESULT_OK, new Intent().putExtra(MediaStore.EXTRA_OUTPUT, uri));
+        setResult(RESULT_OK, new Intent().putExtra(MediaStore.EXTRA_OUTPUT, uri).putExtra(MediaStore.EXTRA_SIZE_LIMIT, lastRect));
     }
 
     private void setResultException(Throwable throwable) {
